@@ -1,55 +1,47 @@
 "use client";
-import { useAuthenticator } from "@aws-amplify/ui-react";
-import { useState, useEffect } from "react";
-import { generateClient } from "aws-amplify/data";
-import type { Schema } from "@/amplify/data/resource";
-import "./../app/app.css";
 
+import { useEffect, useState } from "react";
+import CustomAuthPage from "./CustomAuthenticator";
+import "@aws-amplify/ui-react/styles.css";
+import { getCurrentUser } from "aws-amplify/auth";
+import { useRouter } from "next/navigation";
+import { Amplify } from "aws-amplify";
+import outputs from "@/amplify_outputs.json";
 
-  
-export default function App() {
-  const { signOut } = useAuthenticator();
-  const client = generateClient<Schema>();
+Amplify.configure(outputs);
 
-  const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
-
-  function listTodos() {
-    client.models.Todo.observeQuery().subscribe({
-      next: (data) => setTodos([...data.items]),
-    });
-  }
+export default function HomePage() {
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    listTodos();
-  }, []);
+    getCurrentUser()
+      .then(() => router.replace("/dashboard"))
+      .catch(() => setIsLoading(false));
+  }, [router]);
 
-  function createTodo() {
-    client.models.Todo.create({
-      content: window.prompt("Todo content"),
-    });
-  }
-    
-  function deleteTodo(id: string) {
-    client.models.Todo.delete({ id })
+  if (isLoading) {
+    return (
+      <main className="flex min-h-screen w-full items-center justify-center bg-gray-50">
+        <p className="text-sm text-gray-600">로그인 상태를 확인하는 중입니다...</p>
+      </main>
+    );
   }
 
   return (
-    <main>
-      <h1>My todos</h1>
-      <button onClick={createTodo}>+ new</button>
-      <ul>
-        {todos.map((todo) => (
-          <li onClick={() => deleteTodo(todo.id)} key={todo.id}>{todo.content}</li>
-        ))}
-      </ul>
-      <div>
-        🥳 App successfully hosted. Try creating a new todo.
-        <br />
-        <a href="https://docs.amplify.aws/nextjs/start/quickstart/nextjs-app-router-client-components/">
-          Review next steps of this tutorial.
-        </a>
+    <main className="flex min-h-screen w-full items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-6 rounded-xl border border-gray-100 bg-white p-8 shadow-md">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+            RAG Simple App
+          </h1>
+          <p className="mt-2 text-sm text-gray-600">
+            서비스 이용을 위해 로그인해 주세요
+          </p>
+        </div>
+
+        <CustomAuthPage />
       </div>
-      <button onClick={signOut}>Sign out</button>
     </main>
   );
 }
