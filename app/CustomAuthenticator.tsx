@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   confirmSignUp,
   fetchUserAttributes,
@@ -28,6 +29,7 @@ type AuthUser = Awaited<ReturnType<typeof getCurrentUser>> & {
 };
 
 export default function CustomAuthPage({ children }: CustomAuthPageProps) {
+  const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [nickname, setNickname] = useState('')
@@ -41,6 +43,12 @@ export default function CustomAuthPage({ children }: CustomAuthPageProps) {
       .catch(() => setUser(null))
       .finally(() => setIsLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (children && !isLoading && !user) {
+      router.replace('/login');
+    }
+  }, [children, isLoading, router, user]);
 
   const getAuthenticatedUser = async () => {
     const currentUser = await getCurrentUser();
