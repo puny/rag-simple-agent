@@ -9,6 +9,7 @@ frontend:
   phases:
     preBuild:
       commands:
+        - nvm use 22
         - npm i
     build:
       commands:
