@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>반응형 한 행 단락 배치</title>
+  <style>
+    /* 1. 컨테이너 (부모 요소) 설정 */
+    .card-row {
+      display: flex;             /* 자식 요소들을 가로 배치 */
+      gap: 20px;                 /* 단락 사이의 간격 */
+      max-width: 1200px;
+      margin: 0 auto;            /* 화면 중앙 정렬 */
+      padding: 20px;
+    }
+
+    /* 2. 각 단락 카드 (자식 요소) 설정 */
+    .card {
+      flex: 1;                   /* 모든 단락이 동일한 비율(1:1:1)로 공간 분배 */
+      background-color: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .card h3 {
+      margin-top: 0;
+      color: #333;
+    }
+
+    .card p {
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 0;
+    }
+
+    /* 3. 반응형 설정 (모바일 브라우저/화면 폭 768px 이하) */
+    @media (max-width: 768px) {
+      .card-row {
+        flex-direction: column;  /* 가로 배치를 세로 배치로 변경 */
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card-row">
+    <div class="card">
+      <h3>첫 번째 구역</h3>
+      <p>데스크톱에서는 왼쪽에 배치되며, 모바일 화면으로 줄어들면 가장 위로 이동합니다.</p>
+    </div>
+    <div class="card">
+      <h3>두 번째 구역</h3>
+      <p>중앙을 차지하는 단락입니다. Flexbox의 flex: 1 속성 덕분에 동일한 너비를 가집니다.</p>
+    </div>
+    <div class="card">
+      <h3>세 번째 구역</h3>
+      <p>오른쪽 끝 구역입니다. gap 속성을 통해 각 단락 사이의 여백을 일정하게 유지합니다.</p>
+    </div>
+  </div>
+
+</body>
+</html>
