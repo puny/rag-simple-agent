@@ -1,11 +1,52 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
 
-const schema = a.schema({
-  Todo: a
-    .model({
-      content: a.string()
+import {
+  defineConversationHandlerFunction,
+} from "@aws-amplify/backend-ai/conversation";
+
+
+export const model =
+  "anthropic.claude-sonnet-4-5-20250929-v1:0";
+
+export const crossRegionModel =
+  "global.anthropic.claude-sonnet-4-5-20250929-v1:0";
+
+
+export const conversationHandler =
+  defineConversationHandlerFunction({
+    entry: "./conversationHandler.ts",
+    name: "conversationHandler",
+    models: [
+      {
+        modelId: crossRegionModel,
+      },
+    ],
+  });
+
+
+const schema = a.schema({   
+  chat: a.conversation({    
+    aiModel: {resourcePath: crossRegionModel,},
+    systemPrompt: 'You are a helpful assistant',
+    handler: conversationHandler,
+  })
+  .authorization((allow) => allow.owner()),
+    
+  generateRecipe: a.generation({
+    aiModel: {resourcePath: crossRegionModel,},
+    systemPrompt: 'You are a helpful assistant that generates recipes.',    
+  })
+  .arguments({
+    description: a.string(),
+  })
+  .returns(
+    a.customType({
+      name: a.string(),
+      ingredients: a.string().array(),
+      instructions: a.string(),
     })
-    .authorization(allow => [allow.owner(), allow.publicApiKey().to(['read'])])
+  )
+  .authorization((allow) => allow.authenticated()),
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -13,10 +54,6 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: 'apiKey',
-    // API Key is used for allow.publicApiKey() rules
-    apiKeyAuthorizationMode: {
-      expiresInDays: 30
-    }
+    defaultAuthorizationMode: 'userPool',
   }
 });

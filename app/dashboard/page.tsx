@@ -29,6 +29,14 @@ export default function DashboardPage() {
 
                 <button
                   type="button"
+                  onClick={() => router.push("/chat")}
+                  className="min-h-11 w-full rounded-lg bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 focus:outline-none focus:ring-4 focus:ring-teal-200 sm:w-auto"
+                >
+                  Chat 시작
+                </button>
+
+                <button
+                  type="button"
                   onClick={async () => {
                     if (signOut) {
                       await signOut();
