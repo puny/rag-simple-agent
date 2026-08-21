@@ -125,76 +125,91 @@ export default function CustomAuthPage({ initialStep = 'SIGN_IN', children }: Cu
       : children
         ? children({ user, signOut: handleSignOut })
         : (
-    <div className="max-w-md mx-auto mt-20 p-6 bg-white border rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4 text-center">
+    <div className="w-full">
+      <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">
         {step === 'SIGN_IN' && '로그인'}
         {step === 'SIGN_UP' && '회원가입'}
         {step === 'CONFIRM' && '이메일 인증'}
       </h2>
+      <p className="mt-2 text-sm leading-6 text-slate-500">
+        {step === 'SIGN_IN' && '계정에 로그인해 작업을 계속하세요.'}
+        {step === 'SIGN_UP' && '새 계정을 만들고 바로 시작하세요.'}
+        {step === 'CONFIRM' && '이메일로 받은 인증 코드를 입력하세요.'}
+      </p>
 
       {step === 'SIGN_IN' && (
-        <form onSubmit={handleSignIn} className="flex flex-col gap-3">
+        <form onSubmit={handleSignIn} className="mt-6 flex flex-col gap-4">
           <input
             type="email"
             placeholder="이메일"
+            required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="p-2 border rounded"
+            className="min-h-12 w-full rounded-lg border border-slate-300 px-4 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-100"
           />
           <input
             type="password"
             placeholder="비밀번호"
+            required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="p-2 border rounded"
+            className="min-h-12 w-full rounded-lg border border-slate-300 px-4 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-100"
           />
-          <button type="submit" className="bg-teal-600 text-white p-2 rounded">로그인</button>
-          <button type="button" onClick={() => setStep('SIGN_UP')} className="text-sm text-gray-500">
+          <button type="submit" className="min-h-12 w-full rounded-lg bg-teal-700 px-4 py-3 font-semibold text-white transition hover:bg-teal-800 focus:outline-none focus:ring-4 focus:ring-teal-200">
+            로그인
+          </button>
+          <button type="button" onClick={() => setStep('SIGN_UP')} className="min-h-11 text-sm font-medium text-teal-700 underline-offset-4 hover:underline">
             계정이 없으신가요? 회원가입
           </button>
         </form>
       )}
 
       {step === 'SIGN_UP' && (
-        <form onSubmit={handleSignUp} className="flex flex-col gap-3">
+        <form onSubmit={handleSignUp} className="mt-6 flex flex-col gap-4">
           <input
             type="text"
             placeholder="닉네임"
+            required
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
-            className="p-2 border rounded"
+            className="min-h-12 w-full rounded-lg border border-slate-300 px-4 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-100"
           />
           <input
             type="email"
             placeholder="이메일"
+            required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="p-2 border rounded"
+            className="min-h-12 w-full rounded-lg border border-slate-300 px-4 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-100"
           />
           <input
             type="password"
             placeholder="비밀번호"
+            required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="p-2 border rounded"
+            className="min-h-12 w-full rounded-lg border border-slate-300 px-4 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-100"
           />
-          <button type="submit" className="bg-teal-600 text-white p-2 rounded">회원가입</button>
-          <button type="button" onClick={() => setStep('SIGN_IN')} className="text-sm text-gray-500">
+          <button type="submit" className="min-h-12 w-full rounded-lg bg-teal-700 px-4 py-3 font-semibold text-white transition hover:bg-teal-800 focus:outline-none focus:ring-4 focus:ring-teal-200">
+            회원가입
+          </button>
+          <button type="button" onClick={() => setStep('SIGN_IN')} className="min-h-11 text-sm font-medium text-teal-700 underline-offset-4 hover:underline">
             이미 계정이 있으신가요? 로그인
           </button>
         </form>
       )}
 
       {step === 'CONFIRM' && (
-        <form onSubmit={handleConfirmSignUp} className="flex flex-col gap-3">
+        <form onSubmit={handleConfirmSignUp} className="mt-6 flex flex-col gap-4">
           <input
             type="text"
             placeholder="인증코드 6자리"
+            required
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            className="p-2 border rounded"
+            className="min-h-12 w-full rounded-lg border border-slate-300 px-4 text-base tracking-[0.3em] text-slate-900 outline-none transition placeholder:tracking-normal placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-100"
           />
-          <button type="submit" className="bg-teal-600 text-white p-2 rounded">인증 완료</button>
+          <button type="submit" className="min-h-12 w-full rounded-lg bg-teal-700 px-4 py-3 font-semibold text-white transition hover:bg-teal-800 focus:outline-none focus:ring-4 focus:ring-teal-200">인증 완료</button>
         </form>
       )}
     </div>

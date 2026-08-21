@@ -23,21 +23,21 @@ export default function AuthLayout({
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-6 rounded-xl bg-white p-8 shadow-md border border-gray-100">
-        {/* 서비스 로고 및 타이틀 영역 */}
-        <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-            My Amplify App
+    <main className="flex min-h-dvh w-full items-center justify-center bg-slate-950 px-4 py-6 sm:px-6 sm:py-10">
+      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-800 bg-white shadow-2xl shadow-slate-950/30">
+        <div className="bg-teal-700 px-6 py-7 text-white sm:px-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-100">
+            RAG Simple App
+          </p>
+          <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+            지식에 더 빠르게 닿는 공간
           </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            서비스 이용을 위해 로그인해 주세요
+          <p className="mt-2 text-sm leading-6 text-teal-50">
+            서비스 이용을 위해 계정으로 시작해 주세요.
           </p>
         </div>
-
-        {/* page.tsx 렌더링 영역 */}
-        {children}
+        <div className="px-5 py-6 sm:px-8 sm:py-8">{children}</div>
       </div>
-    </div>
+    </main>
   );
 }
