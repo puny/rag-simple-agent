@@ -1,10 +1,27 @@
-// app/(auth)/layout.tsx
+'use client';
+
+import { getCurrentUser } from 'aws-amplify/auth';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then(() => router.replace('/dashboard'))
+      .catch(() => setIsReady(true));
+  }, [router]);
+
+  if (!isReady) {
+    return null;
+  }
+
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-6 rounded-xl bg-white p-8 shadow-md border border-gray-100">

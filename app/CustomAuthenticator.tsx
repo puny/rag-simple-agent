@@ -16,6 +16,7 @@ import outputs from '@/amplify_outputs.json';
 Amplify.configure(outputs);
 
 type CustomAuthPageProps = {
+  initialStep?: 'SIGN_UP' | 'SIGN_IN';
   children?: (auth: {
     user: (Awaited<ReturnType<typeof getCurrentUser>> & {
       nickname?: string;
@@ -28,7 +29,7 @@ type AuthUser = Awaited<ReturnType<typeof getCurrentUser>> & {
   nickname?: string;
 };
 
-export default function CustomAuthPage({ children }: CustomAuthPageProps) {
+export default function CustomAuthPage({ initialStep = 'SIGN_IN', children }: CustomAuthPageProps) {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
@@ -36,7 +37,7 @@ export default function CustomAuthPage({ children }: CustomAuthPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
-  const [step, setStep] = useState<'SIGN_UP' | 'CONFIRM' | 'SIGN_IN'>('SIGN_IN');
+  const [step, setStep] = useState<'SIGN_UP' | 'CONFIRM' | 'SIGN_IN'>(initialStep);
 
   useEffect(() => {
     getAuthenticatedUser()
@@ -47,6 +48,12 @@ export default function CustomAuthPage({ children }: CustomAuthPageProps) {
   useEffect(() => {
     if (children && !isLoading && !user) {
       router.replace('/login');
+    }
+  }, [children, isLoading, router, user]);
+
+  useEffect(() => {
+    if (!children && !isLoading && user) {
+      router.replace('/dashboard');
     }
   }, [children, isLoading, router, user]);
 
@@ -113,11 +120,11 @@ export default function CustomAuthPage({ children }: CustomAuthPageProps) {
   };
 
   return (
-    children
-      ? isLoading
-        ? null
-        : children({ user, signOut: handleSignOut })
-      : (
+    isLoading || (!children && user)
+      ? null
+      : children
+        ? children({ user, signOut: handleSignOut })
+        : (
     <div className="max-w-md mx-auto mt-20 p-6 bg-white border rounded-lg shadow-md">
       <h2 className="text-xl font-bold mb-4 text-center">
         {step === 'SIGN_IN' && '로그인'}
