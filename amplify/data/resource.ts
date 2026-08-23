@@ -5,11 +5,11 @@ import {
 } from "@aws-amplify/backend-ai/conversation";
 
 
-// export const crossRegionModel =
-//   "global.anthropic.claude-sonnet-4-5-20250929-v1:0";
-
 export const crossRegionModel =
-  "global.anthropic.claude-haiku-4-5-20250514-v1:0";
+  "global.anthropic.claude-sonnet-4-5-20250929-v1:0";
+
+// export const crossRegionModel =
+//   "global.anthropic.claude-haiku-4-5-20250514-v1:0";
 
 
 export const conversationHandler =
