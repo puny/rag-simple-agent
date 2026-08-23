@@ -21,6 +21,7 @@ export const conversationHandler =
     models: [
       {
         modelId: crossRegionModel,
+        region: "ap-northeast-2",
       },
     ],
   });
