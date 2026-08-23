@@ -11,11 +11,17 @@ const backend = defineBackend({
 
 const account = backend.stack.account;
 
+// const inferenceProfileArn =
+//   "arn:aws:bedrock:ap-northeast-2:${account}:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0";
+
+// const foundationModelArn =
+//   "arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0";
+
 const inferenceProfileArn =
-  `arn:aws:bedrock:ap-northeast-2:${account}:inference-profile/apac.anthropic.claude-sonnet-4-20250514-v1:0`;
+  "arn:aws:bedrock:ap-northeast-2:${account}:inference-profile/apac.anthropic.claude-haiku-4-5-20250514-v1:0";
 
 const foundationModelArn =
-  "arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-4-20250514-v1:0";
+  "arn:aws:bedrock:*::foundation-model/anthropic.claude-haiku-4-5-20250514-v1:0";
 
 backend.conversationHandler.resources.lambda.addToRolePolicy(
   new PolicyStatement({
