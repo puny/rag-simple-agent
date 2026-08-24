@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { createAIHooks } from '@aws-amplify/ui-react-ai';
 import { generateClient } from 'aws-amplify/data';
+import ReactMarkdown from 'react-markdown';
 import type { Schema } from '../../amplify/data/resource';
 import CustomAuthPage from '../CustomAuthenticator';
 
@@ -112,7 +113,11 @@ function ChatConversation({
                   return (
                     <div key={`${message.role ?? 'message'}-${index}`} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-6 sm:max-w-[75%] ${isUser ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-800'}`}>
-                        {text}
+                        {isUser ? text : (
+                          <div className="markdown-content">
+                            <ReactMarkdown>{text}</ReactMarkdown>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
