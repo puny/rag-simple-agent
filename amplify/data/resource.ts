@@ -1,4 +1,4 @@
-import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { type ClientSchema, a, defineData, defineFunction } from '@aws-amplify/backend';
 
 import {
   defineConversationHandlerFunction,
@@ -23,8 +23,35 @@ export const conversationHandler =
     ],
   });
 
+export const adminUserHandler = defineFunction({
+  entry: './adminUserHandler.ts',
+});
+
+export const updateMemberTierHandler = defineFunction({
+  entry: './updateMemberTierHandler.ts',
+});
+
 
 const schema = a.schema({   
+  MemberTier: a.enum(['GUEST', 'GENERAL', 'PREMIUM']),
+  AdminUser: a.customType({
+    username: a.string().required(),
+    email: a.string(),
+    nickname: a.string(),
+    tier: a.ref('MemberTier').required(),
+  }),
+  adminUsers: a.query()
+    .returns(a.ref('AdminUser').array())
+    .authorization((allow) => [allow.group('ADMINS')])
+    .handler(a.handler.function(adminUserHandler)),
+  updateMemberTier: a.mutation()
+    .arguments({
+      username: a.string().required(),
+      tier: a.ref('MemberTier').required(),
+    })
+    .returns(a.ref('AdminUser'))
+    .authorization((allow) => [allow.group('ADMINS')])
+    .handler(a.handler.function(updateMemberTierHandler)),
   chat: a.conversation({    
     aiModel: {resourcePath: crossRegionModel,},
     systemPrompt: 'You are a helpful assistant',

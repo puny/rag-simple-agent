@@ -35,6 +35,16 @@ export default function DashboardPage() {
                   Chat 시작
                 </button>
 
+                {user.groups?.includes("ADMINS") && (
+                  <button
+                    type="button"
+                    onClick={() => router.push("/admin")}
+                    className="min-h-11 w-full rounded-lg border border-teal-600 bg-white px-4 py-2 text-sm font-semibold text-teal-700 transition hover:bg-teal-50 focus:outline-none focus:ring-4 focus:ring-teal-100 sm:w-auto"
+                  >
+                    관리자 페이지
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={async () => {

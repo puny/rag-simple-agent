@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   confirmSignUp,
+  fetchAuthSession,
   fetchUserAttributes,
   getCurrentUser,
   signIn,
@@ -20,6 +21,7 @@ type CustomAuthPageProps = {
   children?: (auth: {
     user: (Awaited<ReturnType<typeof getCurrentUser>> & {
       nickname?: string;
+      groups?: string[];
     }) | null;
     signOut: () => Promise<void>;
   }) => React.ReactNode;
@@ -27,6 +29,7 @@ type CustomAuthPageProps = {
 
 type AuthUser = Awaited<ReturnType<typeof getCurrentUser>> & {
   nickname?: string;
+  groups?: string[];
 };
 
 export default function CustomAuthPage({ initialStep = 'SIGN_IN', children }: CustomAuthPageProps) {
@@ -60,10 +63,24 @@ export default function CustomAuthPage({ initialStep = 'SIGN_IN', children }: Cu
   const getAuthenticatedUser = async () => {
     const currentUser = await getCurrentUser();
     const attributes = await fetchUserAttributes();
+    // Cognito 그룹 변경사항이 반영된 최신 JWT를 받아옵니다.
+    const session = await fetchAuthSession({ forceRefresh: true });
+    const getGroupsFromClaim = (claim: unknown): string[] => {
+      if (Array.isArray(claim)) {
+        return claim.filter((group): group is string => typeof group === 'string');
+      }
+
+      return typeof claim === 'string' ? [claim] : [];
+    };
+    const groups = Array.from(new Set([
+      ...getGroupsFromClaim(session.tokens?.accessToken.payload['cognito:groups']),
+      ...getGroupsFromClaim(session.tokens?.idToken?.payload['cognito:groups']),
+    ]));
 
     setUser({
       ...currentUser,
       nickname: attributes.nickname,
+      groups,
     });
   };
 

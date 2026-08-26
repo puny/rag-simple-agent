@@ -1,0 +1,33 @@
+-------------------------------------------------------------------------------------------------------
+|                                        ListInferenceProfiles                                        |
++---------------------------------------------------+---------------------------------------+---------+
+|                        ID                         |                 Name                  | Status  |
++---------------------------------------------------+---------------------------------------+---------+
+|  apac.anthropic.claude-3-sonnet-20240229-v1:0     |  APAC Anthropic Claude 3 Sonnet       |  ACTIVE |
+|  apac.anthropic.claude-3-5-sonnet-20240620-v1:0   |  APAC Anthropic Claude 3.5 Sonnet     |  ACTIVE |
+|  apac.anthropic.claude-3-haiku-20240307-v1:0      |  APAC Anthropic Claude 3 Haiku        |  ACTIVE |
+|  apac.anthropic.claude-3-5-sonnet-20241022-v2:0   |  APAC Anthropic Claude 3.5 Sonnet v2  |  ACTIVE |
+|  apac.amazon.nova-micro-v1:0                      |  APAC Nova Micro                      |  ACTIVE |
+|  apac.amazon.nova-lite-v1:0                       |  APAC Nova Lite                       |  ACTIVE |
+|  apac.amazon.nova-pro-v1:0                        |  APAC Nova Pro                        |  ACTIVE |
+|  apac.anthropic.claude-sonnet-4-20250514-v1:0     |  APAC Claude Sonnet 4                 |  ACTIVE |
+|  apac.twelvelabs.pegasus-1-2-v1:0                 |  APAC Pegasus v1.2                    |  ACTIVE |
+|  apac.twelvelabs.marengo-embed-2-7-v1:0           |  APAC TwelveLabs Marengo Embed v2.7   |  ACTIVE |
+|  global.cohere.embed-v4:0                         |  Global Cohere Embed v4               |  ACTIVE |
+|  global.twelvelabs.pegasus-1-2-v1:0               |  GLOBAL TwelveLabs Pegasus v1.2       |  ACTIVE |
+|  global.amazon.nova-2-lite-v1:0                   |  GLOBAL Amazon Nova 2 Lite            |  ACTIVE |
+|  global.anthropic.claude-opus-4-5-20251101-v1:0   |  GLOBAL Anthropic Claude Opus 4.5     |  ACTIVE |
+|  global.anthropic.claude-sonnet-4-6               |  Global Anthropic Claude Sonnet 4.6   |  ACTIVE |
+|  global.anthropic.claude-opus-4-6-v1              |  Global Anthropic Claude Opus 4.6     |  ACTIVE |
+|  global.anthropic.claude-sonnet-4-5-20250929-v1:0 |  Global Claude Sonnet 4.5             |  ACTIVE |
+|  global.anthropic.claude-opus-4-7                 |  Global Anthropic Claude Opus 4.7     |  ACTIVE |
+|  global.anthropic.claude-opus-4-8                 |  Global Anthropic Claude Opus 4.8     |  ACTIVE |
+|  global.anthropic.claude-fable-5                  |  Global Anthropic Claude Fable 5      |  ACTIVE |
+|  global.anthropic.claude-sonnet-5                 |  Global Anthropic Claude Sonnet 5     |  ACTIVE |
+|  global.anthropic.claude-opus-5                   |  Global Anthropic Claude Opus 5       |  ACTIVE |
+|  global.anthropic.claude-haiku-4-5-20251001-v1:0  |  Global Anthropic Claude Haiku 4.5    |  ACTIVE |
+|  global.openai.gpt-5.6-sol                        |  Global OpenAI GPT-5.6 Sol            |  ACTIVE |
+|  global.openai.gpt-5.6-terra                      |  Global OpenAI GPT-5.6 Terra          |  ACTIVE |
+|  global.openai.gpt-5.6-luna                       |  Global OpenAI GPT-5.6 Luna           |  ACTIVE |
+|  global.xai.grok-4.6                              |  Global xAI Grok 4.6                  |  ACTIVE |
++---------------------------------------------------+---------------------------------------+---------+
