@@ -31,9 +31,27 @@ export const updateMemberTierHandler = defineFunction({
   entry: './updateMemberTierHandler.ts',
 });
 
+export const incrementQuestionCountHandler = defineFunction({
+  entry: './incrementQuestionCountHandler.ts',
+  resourceGroupName: 'data',
+});
+
 
 const schema = a.schema({   
   MemberTier: a.enum(['GUEST', 'GENERAL', 'PREMIUM']),
+  MemberTierConfig: a.model({
+    id: a.id().required(),
+    tier: a.ref('MemberTier').required(),
+    modelIds: a.string().array().required(),
+    monthlyQuestionLimit: a.integer().required(),
+  }).authorization((allow) => [allow.group('ADMINS'), allow.authenticated().to(['read'])]),
+  UserMembership: a.model({
+    username: a.string().required(),
+    tier: a.ref('MemberTier').required(),
+    startedAt: a.datetime().required(),
+    expiresAt: a.datetime().required(),
+    questionCount: a.integer().required(),
+  }).authorization((allow) => [allow.group('ADMINS'), allow.owner()]),
   AdminUser: a.customType({
     username: a.string().required(),
     email: a.string(),
@@ -52,6 +70,10 @@ const schema = a.schema({
     .returns(a.ref('AdminUser'))
     .authorization((allow) => [allow.group('ADMINS')])
     .handler(a.handler.function(updateMemberTierHandler)),
+  incrementQuestionCount: a.mutation()
+    .returns(a.integer().required())
+    .authorization((allow) => [allow.authenticated()])
+    .handler(a.handler.function(incrementQuestionCountHandler)),
   chat: a.conversation({    
     aiModel: {resourcePath: crossRegionModel,},
     systemPrompt: 'You are a helpful assistant',

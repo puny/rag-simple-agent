@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createAIHooks } from '@aws-amplify/ui-react-ai';
 import { generateClient } from 'aws-amplify/data';
 import ReactMarkdown from 'react-markdown';
@@ -27,6 +28,16 @@ export default function ChatPage() {
   const [selectedConversationId, setSelectedConversationId] = useState<string>();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const handleConversationChange = useCallback((conversation: ConversationSummary) => {
+    setConversations((currentConversations) => [
+      ...currentConversations.filter((currentConversation) => currentConversation.id !== conversation.id),
+      conversation,
+    ].sort((first, second) => {
+      const firstTime = first.updatedAt ? new Date(first.updatedAt).getTime() : 0;
+      const secondTime = second.updatedAt ? new Date(second.updatedAt).getTime() : 0;
+      return secondTime - firstTime;
+    }));
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -67,7 +78,19 @@ export default function ChatPage() {
             return secondTime - firstTime;
           });
 
-        setConversations(completedConversations);
+        setConversations((currentConversations) => [
+          ...completedConversations,
+          ...currentConversations.filter((currentConversation) => (
+            !completedConversations.some((conversation) => conversation.id === currentConversation.id)
+          )),
+        ].sort((first, second) => {
+          const firstTime = first.updatedAt ? new Date(first.updatedAt).getTime() : 0;
+          const secondTime = second.updatedAt ? new Date(second.updatedAt).getTime() : 0;
+          return secondTime - firstTime;
+        }));
+        setSelectedConversationId((currentConversationId) => (
+          currentConversationId ?? completedConversations[0]?.id
+        ));
       }
     };
 
@@ -91,11 +114,15 @@ export default function ChatPage() {
           return null;
         }
 
+        if (isLoadingConversations) {
+          return <main className="min-h-dvh bg-slate-950" />;
+        }
+
         const membershipTier = user.groups?.includes('PREMIUM')
-          ? 'premium'
+          ? 'PREMIUM'
           : user.groups?.includes('GENERAL')
-            ? 'general'
-            : 'guest';
+            ? 'GENERAL'
+            : 'GUEST';
 
         return (
           <ChatConversation
@@ -105,13 +132,14 @@ export default function ChatPage() {
             conversations={conversations}
             isLoadingConversations={isLoadingConversations}
             membershipTier={membershipTier}
-            userId={user.userId}
+            userId={user.username}
             onSelectConversation={setSelectedConversationId}
             onRenameConversation={(conversationId, title) => {
               setConversations((currentConversations) => currentConversations.map((conversation) => (
                 conversation.id === conversationId ? { ...conversation, title } : conversation
               )));
             }}
+            onConversationChange={handleConversationChange}
             onNewChat={() => setSelectedConversationId(undefined)}
           />
         );
@@ -129,56 +157,86 @@ function ChatConversation({
   userId,
   onSelectConversation,
   onRenameConversation,
+  onConversationChange,
   onNewChat,
 }: {
   conversationId?: string;
   signOut: () => Promise<void>;
   conversations: ConversationSummary[];
   isLoadingConversations: boolean;
-  membershipTier: 'guest' | 'general' | 'premium';
+  membershipTier: 'GUEST' | 'GENERAL' | 'PREMIUM';
   userId: string;
   onSelectConversation: (conversationId: string) => void;
   onRenameConversation: (conversationId: string, title: string) => void;
+  onConversationChange: (conversation: ConversationSummary) => void;
   onNewChat: () => void;
 }) {
+  const router = useRouter();
   const [input, setInput] = useState('');
   const [guestQuestionCount, setGuestQuestionCount] = useState(0);
   const [editingConversationId, setEditingConversationId] = useState<string>();
   const [titleDraft, setTitleDraft] = useState('');
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [{ data, isLoading, hasError, errors }, sendMessage] = useAIConversation('chat', {
     id: conversationId,
   });
 
   useEffect(() => {
-    if (membershipTier !== 'guest') {
+    if (membershipTier !== 'GUEST') {
       return;
     }
 
-    const savedCount = Number(localStorage.getItem(`guest-question-count:${userId}`) ?? 0);
-    setGuestQuestionCount(Number.isFinite(savedCount) ? savedCount : 0);
+    setGuestQuestionCount(0);
   }, [membershipTier, userId]);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const message = input.trim();
 
-    if (!message || isLoading || (membershipTier === 'guest' && guestQuestionCount >= GUEST_QUESTION_LIMIT)) {
+    if (!message || isLoading || (membershipTier === 'GUEST' && guestQuestionCount >= GUEST_QUESTION_LIMIT)) {
+      return;
+    }
+
+    const countResult = await client.mutations.incrementQuestionCount({});
+    if (countResult.errors?.length || countResult.data === undefined) {
       return;
     }
 
     sendMessage({
       content: [{ text: message }],
     });
-    if (membershipTier === 'guest') {
-      const nextCount = guestQuestionCount + 1;
-      setGuestQuestionCount(nextCount);
-      localStorage.setItem(`guest-question-count:${userId}`, String(nextCount));
+    if (membershipTier === 'GUEST') {
+      setGuestQuestionCount(countResult.data ?? 0);
     }
     setInput('');
   };
 
   const messages = (data?.messages ?? []) as ChatMessage[];
   const errorMessage = errors?.[0]?.message;
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+
+    if (container && messages.length > 0) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [messages, isLoading]);
+
+  useEffect(() => {
+    const firstUserMessage = messages.find((message) => message.role === 'user');
+    const currentConversationId = data?.conversation?.id ?? conversationId;
+    const title = firstUserMessage?.content?.map((content) => content.text).filter(Boolean).join('').trim();
+
+    if (!currentConversationId || !title) {
+      return;
+    }
+
+    onConversationChange({
+      id: currentConversationId,
+      title,
+      updatedAt: new Date().toISOString(),
+    });
+  }, [conversationId, data?.conversation?.id, messages, onConversationChange]);
 
   const startEditingTitle = (conversation: ConversationSummary) => {
     setEditingConversationId(conversation.id);
@@ -294,16 +352,30 @@ function ChatConversation({
               <h1 className="mt-2 text-2xl font-bold text-slate-950 sm:text-3xl">무엇이든 물어보세요</h1>
               <p className="mt-2 text-sm text-slate-500">AI 어시스턴트와 대화를 시작해 보세요.</p>
               <p className="mt-2 text-xs font-semibold text-slate-500">
-                회원 등급: {membershipTier === 'premium' ? '프리미엄' : membershipTier === 'general' ? '일반' : '게스트'}
-                {membershipTier === 'guest' && ` · 질문 ${guestQuestionCount}/${GUEST_QUESTION_LIMIT}`}
+                회원 등급: {membershipTier === 'PREMIUM' ? '프리미엄' : membershipTier === 'GENERAL' ? '일반' : '게스트'}
+                {membershipTier === 'GUEST' && ` · 질문 ${guestQuestionCount}/${GUEST_QUESTION_LIMIT}`}
               </p>
             </div>
 
             <div className="flex gap-2">
               <button
                 type="button"
+                onClick={() => {
+                  if (window.history.length > 1) {
+                    router.back();
+                  } else {
+                    router.push('/dashboard');
+                  }
+                }}
+                className="min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                ← 이전으로
+              </button>
+              <button
+                type="button"
                 onClick={onNewChat}
-                className="min-h-11 rounded-lg border border-teal-600 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-700 hover:bg-teal-100"
+                disabled={messages.length === 0}
+                className="min-h-11 rounded-lg border border-teal-600 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-700 hover:bg-teal-100 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-400"
               >
                 새 대화
               </button>
@@ -319,7 +391,7 @@ function ChatConversation({
             </div>
           </header>
 
-          <div className="flex-1 space-y-4 overflow-y-auto p-5 sm:p-7" aria-live="polite">
+          <div ref={messagesContainerRef} className="flex-1 space-y-4 overflow-y-auto p-5 sm:p-7" aria-live="polite">
             {messages.length === 0 && !isLoading && (
               <div className="flex min-h-56 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
                 <div>
@@ -361,15 +433,16 @@ function ChatConversation({
                 onChange={(event) => setInput(event.target.value)}
                 placeholder="메시지를 입력하세요"
                 aria-label="메시지"
-                disabled={isLoading || (membershipTier === 'guest' && guestQuestionCount >= GUEST_QUESTION_LIMIT)}
+                autoFocus
+                disabled={isLoading || (membershipTier === 'GUEST' && guestQuestionCount >= GUEST_QUESTION_LIMIT)}
                 className="min-h-12 w-full flex-1 rounded-lg border border-slate-300 px-4 text-base text-slate-900 outline-none placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-100 disabled:bg-slate-100"
               />
               <button
                 type="submit"
-                    disabled={isLoading || !input.trim() || (membershipTier === 'guest' && guestQuestionCount >= GUEST_QUESTION_LIMIT)}
+                    disabled={isLoading || !input.trim() || (membershipTier === 'GUEST' && guestQuestionCount >= GUEST_QUESTION_LIMIT)}
                 className="min-h-12 w-full rounded-lg bg-teal-700 px-5 py-3 font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300 sm:w-auto"
               >
-                    {isLoading ? '답변 중...' : membershipTier === 'guest' && guestQuestionCount >= GUEST_QUESTION_LIMIT ? '질문 한도 초과' : '보내기'}
+                    {isLoading ? '답변 중...' : membershipTier === 'GUEST' && guestQuestionCount >= GUEST_QUESTION_LIMIT ? '질문 한도 초과' : '보내기'}
               </button>
             </div>
           </form>
