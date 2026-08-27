@@ -185,14 +185,31 @@ function ChatConversation({
 }) {
   const router = useRouter();
   const [input, setInput] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [guestQuestionCount, setGuestQuestionCount] = useState(0);
   const [editingConversationId, setEditingConversationId] = useState<string>();
   const [titleDraft, setTitleDraft] = useState('');
   const [copiedConversationId, setCopiedConversationId] = useState<string>();
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const submissionLockRef = useRef(false);
+  const hasObservedLoadingRef = useRef(false);
   const [{ data, isLoading, hasError, errors }, sendMessage] = useAIConversation('chat', {
     id: conversationId,
   });
+
+  useEffect(() => {
+    if (!isSubmitting) {
+      return;
+    }
+
+    if (isLoading) {
+      hasObservedLoadingRef.current = true;
+    } else if (hasObservedLoadingRef.current) {
+      submissionLockRef.current = false;
+      hasObservedLoadingRef.current = false;
+      setIsSubmitting(false);
+    }
+  }, [isLoading, isSubmitting]);
 
   useEffect(() => {
     if (membershipTier !== 'GUEST') {
@@ -206,22 +223,37 @@ function ChatConversation({
     event.preventDefault();
     const message = input.trim();
 
-    if (!message || isLoading || (membershipTier === 'GUEST' && guestQuestionCount >= GUEST_QUESTION_LIMIT)) {
+    if (
+      submissionLockRef.current
+      || !message
+      || isLoading
+      || (membershipTier === 'GUEST' && guestQuestionCount >= GUEST_QUESTION_LIMIT)
+    ) {
       return;
     }
 
-    const countResult = await client.mutations.incrementQuestionCount({});
-    if (countResult.errors?.length || countResult.data === undefined) {
-      return;
-    }
+    submissionLockRef.current = true;
+    setIsSubmitting(true);
 
-    sendMessage({
-      content: [{ text: message }],
-    });
-    if (membershipTier === 'GUEST') {
-      setGuestQuestionCount(countResult.data ?? 0);
+    try {
+      const countResult = await client.mutations.incrementQuestionCount({});
+      if (countResult.errors?.length || countResult.data === undefined) {
+        submissionLockRef.current = false;
+        setIsSubmitting(false);
+        return;
+      }
+
+      sendMessage({
+        content: [{ text: message }],
+      });
+      if (membershipTier === 'GUEST') {
+        setGuestQuestionCount(countResult.data ?? 0);
+      }
+      setInput('');
+    } catch {
+      submissionLockRef.current = false;
+      setIsSubmitting(false);
     }
-    setInput('');
   };
 
   const messages = (data?.messages ?? []) as ChatMessage[];
@@ -493,15 +525,15 @@ function ChatConversation({
                 placeholder="메시지를 입력하세요"
                 aria-label="메시지"
                 autoFocus
-                disabled={isLoading || (membershipTier === 'GUEST' && guestQuestionCount >= GUEST_QUESTION_LIMIT)}
+                disabled={isSubmitting || isLoading || (membershipTier === 'GUEST' && guestQuestionCount >= GUEST_QUESTION_LIMIT)}
                 className="min-h-12 w-full flex-1 rounded-lg border border-slate-300 px-4 text-base text-slate-900 outline-none placeholder:text-slate-400 focus:border-teal-600 focus:ring-4 focus:ring-teal-100 disabled:bg-slate-100"
               />
               <button
                 type="submit"
-                    disabled={isLoading || !input.trim() || (membershipTier === 'GUEST' && guestQuestionCount >= GUEST_QUESTION_LIMIT)}
+                  disabled={isSubmitting || isLoading || !input.trim() || (membershipTier === 'GUEST' && guestQuestionCount >= GUEST_QUESTION_LIMIT)}
                 className="min-h-12 w-full rounded-lg bg-teal-700 px-5 py-3 font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300 sm:w-auto"
               >
-                    {isLoading ? '답변 중...' : membershipTier === 'GUEST' && guestQuestionCount >= GUEST_QUESTION_LIMIT ? '질문 한도 초과' : '보내기'}
+                  {isSubmitting || isLoading ? '답변 중...' : membershipTier === 'GUEST' && guestQuestionCount >= GUEST_QUESTION_LIMIT ? '질문 한도 초과' : '보내기'}
               </button>
             </div>
           </form>
