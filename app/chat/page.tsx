@@ -193,23 +193,38 @@ function ChatConversation({
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const submissionLockRef = useRef(false);
   const hasObservedLoadingRef = useRef(false);
+  const messageCountAtSubmissionRef = useRef(0);
   const [{ data, isLoading, hasError, errors }, sendMessage] = useAIConversation('chat', {
     id: conversationId,
   });
+  const messages = (data?.messages ?? []) as ChatMessage[];
+  const errorMessage = errors?.[0]?.message;
+  const errorsAtSubmissionRef = useRef(errors);
 
   useEffect(() => {
     if (!isSubmitting) {
       return;
     }
 
-    if (isLoading) {
+    const submittedMessages = messages.slice(messageCountAtSubmissionRef.current);
+    const assistantIsLoading = submittedMessages.some((message) => message.role !== 'user' && message.isLoading);
+    const assistantHasFinished = submittedMessages.some((message) => {
+      const text = message.content?.map((content) => content.text).filter(Boolean).join('').trim();
+      return message.role !== 'user' && !message.isLoading && Boolean(text);
+    });
+
+    if (assistantIsLoading) {
       hasObservedLoadingRef.current = true;
-    } else if (hasObservedLoadingRef.current) {
+    } else if (
+      (hasError && errors !== errorsAtSubmissionRef.current)
+      || hasObservedLoadingRef.current
+      || assistantHasFinished
+    ) {
       submissionLockRef.current = false;
       hasObservedLoadingRef.current = false;
       setIsSubmitting(false);
     }
-  }, [isLoading, isSubmitting]);
+  }, [errors, hasError, isSubmitting, messages]);
 
   useEffect(() => {
     if (membershipTier !== 'GUEST') {
@@ -233,6 +248,9 @@ function ChatConversation({
     }
 
     submissionLockRef.current = true;
+    errorsAtSubmissionRef.current = errors;
+    hasObservedLoadingRef.current = false;
+    messageCountAtSubmissionRef.current = messages.length;
     setIsSubmitting(true);
 
     try {
@@ -255,9 +273,6 @@ function ChatConversation({
       setIsSubmitting(false);
     }
   };
-
-  const messages = (data?.messages ?? []) as ChatMessage[];
-  const errorMessage = errors?.[0]?.message;
 
   useEffect(() => {
     const container = messagesContainerRef.current;
