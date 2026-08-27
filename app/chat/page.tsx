@@ -41,6 +41,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     let isMounted = true;
+    const requestedConversationId = new URLSearchParams(window.location.search).get('conversationId');
 
     const loadConversations = async () => {
       // 저장된 대화 목록을 가져온 뒤 각 대화의 메시지를 확인합니다.
@@ -88,9 +89,14 @@ export default function ChatPage() {
           const secondTime = second.updatedAt ? new Date(second.updatedAt).getTime() : 0;
           return secondTime - firstTime;
         }));
-        setSelectedConversationId((currentConversationId) => (
-          currentConversationId ?? completedConversations[0]?.id
-        ));
+        const nextConversationId = completedConversations.find(
+          (conversation) => conversation.id === requestedConversationId,
+        )?.id ?? completedConversations[0]?.id;
+
+        setSelectedConversationId(nextConversationId);
+        if (nextConversationId) {
+          window.history.replaceState(null, '', `/chat?conversationId=${encodeURIComponent(nextConversationId)}`);
+        }
       }
     };
 
@@ -133,14 +139,20 @@ export default function ChatPage() {
             isLoadingConversations={isLoadingConversations}
             membershipTier={membershipTier}
             userId={user.username}
-            onSelectConversation={setSelectedConversationId}
+            onSelectConversation={(conversationId) => {
+              setSelectedConversationId(conversationId);
+              window.history.replaceState(null, '', `/chat?conversationId=${encodeURIComponent(conversationId)}`);
+            }}
             onRenameConversation={(conversationId, title) => {
               setConversations((currentConversations) => currentConversations.map((conversation) => (
                 conversation.id === conversationId ? { ...conversation, title } : conversation
               )));
             }}
             onConversationChange={handleConversationChange}
-            onNewChat={() => setSelectedConversationId(undefined)}
+            onNewChat={() => {
+              setSelectedConversationId(undefined);
+              window.history.replaceState(null, '', '/chat');
+            }}
           />
         );
       }}
@@ -176,6 +188,7 @@ function ChatConversation({
   const [guestQuestionCount, setGuestQuestionCount] = useState(0);
   const [editingConversationId, setEditingConversationId] = useState<string>();
   const [titleDraft, setTitleDraft] = useState('');
+  const [copiedConversationId, setCopiedConversationId] = useState<string>();
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [{ data, isLoading, hasError, errors }, sendMessage] = useAIConversation('chat', {
     id: conversationId,
@@ -241,6 +254,27 @@ function ChatConversation({
   const startEditingTitle = (conversation: ConversationSummary) => {
     setEditingConversationId(conversation.id);
     setTitleDraft(conversation.title);
+  };
+
+  const getConversationUrl = (id: string) => (
+    `${window.location.origin}/chat?conversationId=${encodeURIComponent(id)}`
+  );
+
+  const copyConversationUrl = async (id: string) => {
+    await navigator.clipboard.writeText(getConversationUrl(id));
+    setCopiedConversationId(id);
+    window.setTimeout(() => setCopiedConversationId(undefined), 1500);
+  };
+
+  const shareConversationUrl = async (conversation: ConversationSummary) => {
+    const url = getConversationUrl(conversation.id);
+
+    if (navigator.share) {
+      await navigator.share({ title: conversation.title, url });
+      return;
+    }
+
+    await copyConversationUrl(conversation.id);
   };
 
   const saveTitle = async (conversation: ConversationSummary) => {
@@ -378,6 +412,31 @@ function ChatConversation({
                 className="min-h-11 rounded-lg border border-teal-600 bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-700 hover:bg-teal-100 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-400"
               >
                 새 대화
+              </button>
+              <button
+                type="button"
+                onClick={() => conversationId && void copyConversationUrl(conversationId)}
+                disabled={!conversationId}
+                className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                title="현재 대화 URL 복사"
+                aria-label="현재 대화 URL 복사"
+              >
+                {copiedConversationId === conversationId ? '복사됨' : '⧉ 복사'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const currentConversation = conversations.find((conversation) => conversation.id === conversationId);
+                  if (currentConversation) {
+                    void shareConversationUrl(currentConversation);
+                  }
+                }}
+                disabled={!conversationId}
+                className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                title="현재 대화 URL 공유"
+                aria-label="현재 대화 URL 공유"
+              >
+                ↗ 공유
               </button>
               <button
                 type="button"
