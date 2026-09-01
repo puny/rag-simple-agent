@@ -1,25 +1,57 @@
-## AWS Amplify Next.js (App Router) Starter Template
+# RAG Simple App
 
-This repository provides a starter template for creating applications using Next.js (App Router) and AWS Amplify, emphasizing easy setup for authentication, API, and database capabilities.
+RAG Simple App은 AWS Amplify와 Next.js를 기반으로 만든 간단한 AI 채팅 서비스입니다. 사용자는 로그인 후 AI와 대화를 나누고, 대화 기록을 유지하며, 멤버십 등급에 따라 질문 가능 횟수와 모델 접근 권한을 관리할 수 있습니다.
 
-## Overview
+## 프로젝트 소개
 
-This template equips you with a foundational Next.js application integrated with AWS Amplify, streamlined for scalability and performance. It is ideal for developers looking to jumpstart their project with pre-configured AWS services like Cognito, AppSync, and DynamoDB.
+이 프로젝트는 Retrieval-Augmented Generation(RAG) 기반의 대화형 AI 서비스를 빠르게 구현해볼 수 있는 예제입니다. 단순한 챗봇이 아니라, 사용자별 권한, 질문 제한, 관리자 설정, 대화 공유 기능까지 포함한 실사용형 구조를 갖추고 있습니다.
 
-## Features
+기본 흐름은 다음과 같습니다.
 
-- **Authentication**: Setup with Amazon Cognito for secure user authentication.
-- **API**: Ready-to-use GraphQL endpoint with AWS AppSync.
-- **Database**: Real-time database powered by Amazon DynamoDB.
+- 사용자가 로그인합니다.
+- 대화형 채팅 화면에서 질문을 입력합니다.
+- AI가 응답을 생성합니다.
+- 대화는 기록으로 보관되며, 이전 대화를 다시 열어볼 수 있습니다.
+- 관리자 페이지에서 사용자 등급과 제한 설정을 관리합니다.
 
-## Deploying to AWS
+## 주요 기능
 
-For detailed instructions on deploying your application, refer to the [deployment section](https://docs.amplify.aws/nextjs/start/quickstart/nextjs-app-router-client-components/#deploy-a-fullstack-app-to-aws) of our documentation.
+- AWS Cognito 기반 회원 인증
+- AI 채팅 화면 및 대화 세션 관리
+- 대화 제목 수정, 복사, 공유 기능
+- 게스트/일반/프리미엄 멤버십별 질문 제한
+- 관리자 전용 사용자 및 멤버십 관리 화면
+- AWS Amplify Gen2 기반 백엔드 구조
 
-## Security
+## 기술 스택
 
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+- Next.js 15
+- React 19
+- TypeScript
+- AWS Amplify Gen2
+- Amazon Cognito
+- AppSync / GraphQL 기반 데이터 모델
+- DynamoDB
 
-## License
+## 프로젝트 구조
 
-This library is licensed under the MIT-0 License. See the LICENSE file.
+- app/: 사용자 화면과 페이지 구성
+- amplify/: Amplify 백엔드 설정 및 데이터 모델
+- public/: 정적 자산
+
+## 로컬 실행
+
+```bash
+npm install
+npm run dev
+```
+
+기본적으로 로컬 개발 서버가 실행되면 브라우저에서 앱을 확인할 수 있습니다.
+
+## 실행 환경
+
+이 프로젝트는 AWS Amplify를 활용하는 구조로 설계되어 있으며, 로그인, 데이터, AI 대화 기능을 함께 연결하여 실서비스에 가까운 형태로 구성되어 있습니다.
+
+## 라이선스
+
+이 프로젝트는 MIT-0 라이선스를 따릅니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
