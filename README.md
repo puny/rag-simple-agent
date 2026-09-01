@@ -37,21 +37,25 @@ RAG Simple App은 AWS Amplify와 Next.js를 기반으로 만든 간단한 AI 채
 
 - app/: 사용자 화면과 페이지 구성
 - amplify/: Amplify 백엔드 설정 및 데이터 모델
-- public/: 정적 자산
+- public/: static
 
 ## 로컬 실행
 
 ```bash
 npm install
+npx ampx sandbox
 npm run dev
 ```
 
-기본적으로 로컬 개발 서버가 실행되면 브라우저에서 앱을 확인할 수 있습니다.
-
 ## 실행 환경
 
-이 프로젝트는 AWS Amplify를 활용하는 구조로 설계되어 있으며, 로그인, 데이터, AI 대화 기능을 함께 연결하여 실서비스에 가까운 형태로 구성되어 있습니다.
+로그인, 데이터, AI 대화 기능을 함께 연결하여 실서비스에 가까운 형태로 구성
 
 ## 라이선스
 
-이 프로젝트는 MIT-0 라이선스를 따릅니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
+이 프로젝트는 AWS Amplify Next.js starter 템플릿을 기반으로 개발되었으며, 원본 템플릿의 라이선스 정책을 따릅니다.
+
+- 기반 템플릿: [aws-samples/amplify-next-template](https://github.com/aws-samples/amplify-next-template)
+- 라이선스: MIT No Attribution (MIT-0)
+
+자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.

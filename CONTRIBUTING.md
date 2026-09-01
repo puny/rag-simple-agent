@@ -1,59 +1,82 @@
-# Contributing Guidelines
+# 기여 가이드
 
-Thank you for your interest in contributing to our project. Whether it's a bug report, new feature, correction, or additional
-documentation, we greatly value feedback and contributions from our community.
+이 프로젝트에 관심을 가져주셔서 감사합니다. 버그 수정, 기능 개선, 문서 보완, 테스트 추가 등 다양한 형태의 기여를 환영합니다.
 
-Please read through this document before submitting any issues or pull requests to ensure we have all the necessary
-information to effectively respond to your bug report or contribution.
+기여를 하기 전에 이 문서를 먼저 읽어 주세요. 이 프로젝트는 AWS Amplify와 Next.js 기반의 RAG 챗봇 예제이며, 기능 변경을 할 때는 기존 구조와 흐름을 함께 고려해 주세요.
 
+## 기여 방법
 
-## Reporting Bugs/Feature Requests
+### 1. 이슈 제안
 
-We welcome you to use the GitHub issue tracker to report bugs or suggest features.
+버그를 발견하거나 개선 아이디어가 있다면 GitHub Issues를 통해 알려 주세요.
 
-When filing an issue, please check existing open, or recently closed, issues to make sure somebody else hasn't already
-reported the issue. Please try to include as much information as you can. Details like these are incredibly useful:
+다음 내용을 함께 적어주시면 리뷰가 훨씬 수월합니다.
 
-* A reproducible test case or series of steps
-* The version of our code being used
-* Any modifications you've made relevant to the bug
-* Anything unusual about your environment or deployment
+- 재현 경로 또는 문제 상황
+- 사용 중인 브라우저/환경
+- 실행 방법 또는 설정 요약
+- 관련 스크린샷 또는 로그
+- 수정에 영향을 줄 수 있는 변경 사항
 
+### 2. Pull Request
 
-## Contributing via Pull Requests
-Contributions via pull requests are much appreciated. Before sending us a pull request, please ensure that:
+기여를 위해 PR을 보내기 전에 아래 사항을 확인해 주세요.
 
-1. You are working against the latest source on the *main* branch.
-2. You check existing open, and recently merged, pull requests to make sure someone else hasn't addressed the problem already.
-3. You open an issue to discuss any significant work - we would hate for your time to be wasted.
+1. 최신 main 브랜치 기준으로 작업해 주세요.
+2. 이미 비슷한 이슈나 PR이 있는지 확인해 주세요.
+3. 큰 기능 변경은 먼저 이슈로 논의해 주세요.
+4. 변경 범위를 가능한 한 좁게 유지해 주세요.
+5. 로컬에서 정상 동작하는지 확인해 주세요.
+6. 커밋 메시지는 변경 내용을 명확히 설명하도록 작성해 주세요.
 
-To send us a pull request, please:
+PR 작성 순서는 다음과 같습니다.
 
-1. Fork the repository.
-2. Modify the source; please focus on the specific change you are contributing. If you also reformat all the code, it will be hard for us to focus on your change.
-3. Ensure local tests pass.
-4. Commit to your fork using clear commit messages.
-5. Send us a pull request, answering any default questions in the pull request interface.
-6. Pay attention to any automated CI failures reported in the pull request, and stay involved in the conversation.
+1. 저장소를 fork 합니다.
+2. 필요한 수정 내용을 적용합니다.
+3. 관련 테스트 또는 로컬 확인을 수행합니다.
+4. 커밋을 남깁니다.
+5. GitHub에서 PR을 생성합니다.
+6. 리뷰 코멘트가 있으면 필요한 수정까지 함께 반영합니다.
 
-GitHub provides additional document on [forking a repository](https://help.github.com/articles/fork-a-repo/) and
-[creating a pull request](https://help.github.com/articles/creating-a-pull-request/).
+## 프로젝트에 맞는 기여 원칙
 
+이 프로젝트는 다음과 같은 방향성을 가지고 있습니다.
 
-## Finding contributions to work on
-Looking at the existing issues is a great way to find something to contribute on. As our projects, by default, use the default GitHub issue labels (enhancement/bug/duplicate/help wanted/invalid/question/wontfix), looking at any 'help wanted' issues is a great place to start.
+- 단순 템플릿이 아니라 실제 서비스처럼 동작하는 구조를 유지한다.
+- AWS Amplify 기반 인증, 데이터, AI 대화 기능을 함께 고려한다.
+- 관리자 기능, 사용자 권한, 질문 제한과 같은 서비스 동작을 망치지 않는다.
+- UI와 백엔드 간 흐름을 이해한 채 변경한다.
 
+기여할 때는 다음을 지켜 주세요.
 
-## Code of Conduct
-This project has adopted the [Amazon Open Source Code of Conduct](https://aws.github.io/code-of-conduct).
-For more information see the [Code of Conduct FAQ](https://aws.github.io/code-of-conduct-faq) or contact
-opensource-codeofconduct@amazon.com with any additional questions or comments.
+- 불필요한 코드 정리나 포맷 변경을 함께 섞지 않는다.
+- 관련 기능의 맥락을 벗어난 변경을 하지 않는다.
+- 문서와 코드 변경이 함께 필요하면 함께 반영한다.
 
+## 기여 아이디어
 
-## Security issue notifications
-If you discover a potential security issue in this project we ask that you notify AWS/Amazon Security via our [vulnerability reporting page](http://aws.amazon.com/security/vulnerability-reporting/). Please do **not** create a public github issue.
+다음 항목은 좋은 기여 후보가 될 수 있습니다.
 
+- UI/UX 개선
+- 오류 처리 개선
+- 사용자 경험 향상을 위한 기능 추가
+- 관리자 페이지 기능 보완
+- 문서 설명 보강
+- 테스트 및 검증 코드 추가
 
-## Licensing
+## 협업 규칙
 
-See the [LICENSE](LICENSE) file for our project's licensing. We will ask you to confirm the licensing of your contribution.
+기여는 서로 존중하는 분위기에서 진행해 주세요.
+
+- 건설적인 피드백을 우선적으로 제공해 주세요.
+- 변경 사항은 가능한 한 작은 단위로 나누어 제안해 주세요.
+- 기능 변경 전에 기존 동작과 구조를 확인해 주세요.
+- 보안·민감 정보가 포함된 코드는 커밋하거나 공개하지 마세요.
+
+## 보안 관련 안내
+
+보안 취약점이 의심되면 공개 이슈로 올리지 말고, 저장소 관리자에게 비공개로 알려 주세요.
+
+## 라이선스
+
+기여한 내용은 프로젝트의 [LICENSE](LICENSE) 조건에 따라 사용됩니다. 기여 전 라이선스 내용을 확인해 주세요.
