@@ -137,10 +137,14 @@ export default function CustomAuthPage({ initialStep = 'SIGN_IN', children }: Cu
   };
 
   return (
-    isLoading || (!children && user)
-      ? null
+    isLoading
+      ? <div className="flex min-h-dvh items-center justify-center bg-slate-950 px-6 text-sm text-white">인증 정보를 확인하는 중...</div>
+      : (!children && user)
+        ? null
       : children
-        ? children({ user, signOut: handleSignOut })
+        ? user
+          ? children({ user, signOut: handleSignOut })
+          : <div className="flex min-h-dvh items-center justify-center bg-slate-950 px-6 text-sm text-white">로그인 페이지로 이동하는 중...</div>
         : (
     <div className="w-full">
       <h2 className="text-xl font-bold text-slate-900 sm:text-2xl">

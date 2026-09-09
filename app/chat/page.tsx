@@ -11,6 +11,7 @@ import CustomAuthPage from '../CustomAuthenticator';
 const client = generateClient<Schema>();
 const { useAIConversation } = createAIHooks(client);
 const GUEST_QUESTION_LIMIT = 10;
+const stripLibraryContext = (text: string) => text.split('<library_context>')[0].trim();
 
 type ChatMessage = {
   role?: string;
@@ -22,6 +23,26 @@ type ConversationSummary = {
   id: string;
   title: string;
   updatedAt?: string;
+};
+
+type LibraryDocument = {
+  id: string;
+  filename: string;
+  status?: string;
+};
+
+const getLibraryContext = async (question: string, documentIds: string[]) => {
+  const { data: results } = await client.queries.searchLibrary({ query: question, documentIds });
+  if (!results || results.length === 0) {
+    return undefined;
+  }
+  const excerpts = results
+    .filter((result): result is NonNullable<typeof result> => result !== null && result !== undefined)
+    .map((result) => `[${result.filename}] (유사도 ${result.score.toFixed(2)})\n${result.text}`)
+    .join('\n\n');
+  return {
+    libraryContext: `다음은 사용자의 개인 라이브러리에서 벡터 검색된 참고 문서입니다. 문서에 근거해 답하고, 근거가 없으면 모른다고 말하세요.\n<library_context>\n${excerpts}\n</library_context>`,
+  };
 };
 
 export default function ChatPage() {
@@ -53,7 +74,7 @@ export default function ChatPage() {
             ? await conversationWithMessages.listMessages({})
             : undefined;
           const firstUserMessage = messageResult?.data?.find((message) => message.role === 'user');
-          const messageTitle = firstUserMessage?.content?.map((content) => content.text).filter(Boolean).join('').trim();
+          const messageTitle = stripLibraryContext(firstUserMessage?.content?.map((content) => content.text).filter(Boolean).join('') ?? '');
           const hasAssistantResponse = messageResult?.data?.some((message) => {
             if (message.role === 'user') {
               return false;
@@ -190,6 +211,8 @@ function ChatConversation({
   const [editingConversationId, setEditingConversationId] = useState<string>();
   const [titleDraft, setTitleDraft] = useState('');
   const [copiedConversationId, setCopiedConversationId] = useState<string>();
+  const [libraryDocuments, setLibraryDocuments] = useState<LibraryDocument[]>([]);
+  const [selectedLibraryIds, setSelectedLibraryIds] = useState<string[]>([]);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const submissionLockRef = useRef(false);
   const hasObservedLoadingRef = useRef(false);
@@ -200,6 +223,18 @@ function ChatConversation({
   const messages = (data?.messages ?? []) as ChatMessage[];
   const errorMessage = errors?.[0]?.message;
   const errorsAtSubmissionRef = useRef(errors);
+
+  useEffect(() => {
+    client.models.LibraryDocument.list()
+      .then(({ data: documents }) => {
+        const readyDocuments = (documents ?? [])
+          .filter((document) => document.status === 'READY')
+          .map(({ id, filename, status }) => ({ id, filename, status: status ?? undefined }));
+        setLibraryDocuments(readyDocuments);
+        setSelectedLibraryIds(readyDocuments.map((document) => document.id));
+      })
+      .catch(() => setLibraryDocuments([]));
+  }, []);
 
   useEffect(() => {
     if (!isSubmitting) {
@@ -261,8 +296,10 @@ function ChatConversation({
         return;
       }
 
+      const libraryContext = await getLibraryContext(message, selectedLibraryIds);
       sendMessage({
         content: [{ text: message }],
+        ...(libraryContext ? { aiContext: libraryContext } : {}),
       });
       if (membershipTier === 'GUEST') {
         setGuestQuestionCount(countResult.data ?? 0);
@@ -285,7 +322,7 @@ function ChatConversation({
   useEffect(() => {
     const firstUserMessage = messages.find((message) => message.role === 'user');
     const currentConversationId = data?.conversation?.id ?? conversationId;
-    const title = firstUserMessage?.content?.map((content) => content.text).filter(Boolean).join('').trim();
+    const title = stripLibraryContext(firstUserMessage?.content?.map((content) => content.text).filter(Boolean).join('') ?? '');
 
     if (!currentConversationId || !title) {
       return;
@@ -424,6 +461,26 @@ function ChatConversation({
               </ul>
             )}
           </div>
+          <div className="border-t border-slate-800 p-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">검색할 라이브러리</h3>
+              {libraryDocuments.length > 0 && (
+                <button type="button" onClick={() => setSelectedLibraryIds(selectedLibraryIds.length === libraryDocuments.length ? [] : libraryDocuments.map((document) => document.id))} className="text-xs text-teal-300 hover:text-white">
+                  {selectedLibraryIds.length === libraryDocuments.length ? '전체 해제' : '전체 선택'}
+                </button>
+              )}
+            </div>
+            {libraryDocuments.length === 0 ? <p className="mt-3 text-xs text-slate-500">사용 가능한 라이브러리가 없습니다.</p> : (
+              <div className="mt-3 space-y-2">
+                {libraryDocuments.map((document) => (
+                  <label key={document.id} className="flex cursor-pointer items-start gap-2 text-sm text-slate-300">
+                    <input type="checkbox" checked={selectedLibraryIds.includes(document.id)} onChange={() => setSelectedLibraryIds((current) => current.includes(document.id) ? current.filter((id) => id !== document.id) : [...current, document.id])} className="mt-0.5 accent-teal-500" />
+                    <span className="min-w-0 truncate" title={document.filename}>{document.filename}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
         </aside>
 
         <section className="flex min-h-[calc(100dvh-2.5rem)] min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-800 bg-white shadow-2xl shadow-slate-950/30 sm:min-h-[calc(100dvh-4rem)]">
@@ -509,7 +566,8 @@ function ChatConversation({
 
             {messages.map((message, index) => {
               const isUser = message.role === 'user';
-              const text = message.content?.map((content) => content.text).filter(Boolean).join('') || (message.isLoading ? '답변을 작성하는 중...' : '');
+              const rawText = message.content?.map((content) => content.text).filter(Boolean).join('') || (message.isLoading ? '답변을 작성하는 중...' : '');
+              const text = isUser ? stripLibraryContext(rawText) : rawText;
 
               return (
                 <div key={`${message.role ?? 'message'}-${index}`} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>

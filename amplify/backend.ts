@@ -4,7 +4,8 @@ import { Function as LambdaFunction } from 'aws-cdk-lib/aws-lambda';
 import { Table } from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 import { auth } from './auth/resource.js';
-import { adminUserHandler, data, conversationHandler, crossRegionModel, model, updateMemberTierHandler, incrementQuestionCountHandler } from './data/resource.js';
+import { adminUserHandler, data, conversationHandler, crossRegionModel, model, updateMemberTierHandler, incrementQuestionCountHandler, indexLibraryDocumentHandler, searchLibraryHandler } from './data/resource.js';
+import { libraryStorage } from './storage/resource.js';
 
 const backend = defineBackend({
   auth,
@@ -13,6 +14,9 @@ const backend = defineBackend({
   adminUserHandler,
   updateMemberTierHandler,
   incrementQuestionCountHandler,
+  indexLibraryDocumentHandler,
+  searchLibraryHandler,
+  libraryStorage,
 });
 
 const findUserMembershipTable = (scope: Construct): Table | undefined => {
@@ -30,10 +34,26 @@ const findUserMembershipTable = (scope: Construct): Table | undefined => {
   return undefined;
 };
 
+const findTable = (scope: Construct, name: string): Table | undefined => {
+  for (const child of scope.node.children) {
+    if (child.node.id.includes(name) && 'tableName' in child) {
+      return child as Table;
+    }
+    const nestedTable = findTable(child, name);
+    if (nestedTable) return nestedTable;
+  }
+  return undefined;
+};
+
 const userMembershipTable = findUserMembershipTable(backend.data.stack);
+const libraryDocumentsTable = findTable(backend.data.stack, 'LibraryDocument');
+const libraryChunksTable = findTable(backend.data.stack, 'LibraryChunk');
 
 if (!userMembershipTable) {
   throw new Error('Unable to find the UserMembership DynamoDB table');
+}
+if (!libraryDocumentsTable || !libraryChunksTable) {
+  throw new Error('Unable to find library DynamoDB tables');
 }
 
 const account = backend.stack.account;
@@ -47,12 +67,10 @@ const foundationModelArn =
 backend.conversationHandler.resources.lambda.addToRolePolicy(
   new PolicyStatement({
     effect: Effect.ALLOW,
-
     actions: [
       "bedrock:InvokeModel",
       "bedrock:InvokeModelWithResponseStream",
     ],
-
     resources: [
       inferenceProfileArn,
       foundationModelArn,
@@ -60,6 +78,33 @@ backend.conversationHandler.resources.lambda.addToRolePolicy(
   }),
 );
 
+for (const handler of [backend.indexLibraryDocumentHandler, backend.searchLibraryHandler]) {
+  const lambda = handler.resources.lambda as LambdaFunction;
+  lambda.addToRolePolicy(new PolicyStatement({
+    effect: Effect.ALLOW,
+    actions: ['bedrock:InvokeModel'],
+    resources: ['arn:aws:bedrock:*::foundation-model/amazon.titan-embed-text-v2:0'],
+  }));
+  lambda.addEnvironment('LIBRARY_DOCUMENTS_TABLE_NAME', libraryDocumentsTable.tableName);
+  lambda.addEnvironment('LIBRARY_CHUNKS_TABLE_NAME', libraryChunksTable.tableName);
+  lambda.addToRolePolicy(new PolicyStatement({
+    effect: Effect.ALLOW,
+    actions: ['dynamodb:Scan', 'dynamodb:PutItem', 'dynamodb:DeleteItem'],
+    resources: [libraryChunksTable.tableArn],
+  }));
+}
+
+const indexLibraryDocumentLambda = backend.indexLibraryDocumentHandler.resources.lambda as LambdaFunction;
+indexLibraryDocumentLambda.addToRolePolicy(new PolicyStatement({
+  effect: Effect.ALLOW,
+  actions: ['dynamodb:PutItem', 'dynamodb:Scan', 'dynamodb:DeleteItem'],
+  resources: [libraryDocumentsTable.tableArn],
+}));
+backend.libraryStorage.resources.bucket.grantRead(indexLibraryDocumentLambda);
+indexLibraryDocumentLambda.addEnvironment(
+  'LIBRARY_BUCKET_NAME',
+  backend.libraryStorage.resources.bucket.bucketName,
+);
 (backend.adminUserHandler.resources.lambda as LambdaFunction).addEnvironment(
   'USER_POOL_ID',
   backend.auth.resources.userPool.userPoolId,

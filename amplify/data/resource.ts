@@ -36,6 +36,16 @@ export const incrementQuestionCountHandler = defineFunction({
   resourceGroupName: 'data',
 });
 
+export const indexLibraryDocumentHandler = defineFunction({
+  entry: './indexLibraryDocumentHandler.ts',
+  resourceGroupName: 'data',
+});
+
+export const searchLibraryHandler = defineFunction({
+  entry: './searchLibraryHandler.ts',
+  resourceGroupName: 'data',
+});
+
 
 const schema = a.schema({   
   MemberTier: a.enum(['GUEST', 'GENERAL', 'PREMIUM']),
@@ -52,6 +62,19 @@ const schema = a.schema({
     expiresAt: a.datetime().required(),
     questionCount: a.integer().required(),
   }).authorization((allow) => [allow.group('ADMINS'), allow.owner()]),
+  LibraryDocument: a.model({
+    filename: a.string().required(),
+    s3Key: a.string().required(),
+    contentType: a.string().required(),
+    size: a.integer().required(),
+    status: a.enum(['PROCESSING', 'READY', 'FAILED']),
+  }).authorization((allow) => [allow.owner()]),
+  LibraryChunk: a.model({
+    documentId: a.string().required(),
+    filename: a.string().required(),
+    text: a.string().required(),
+    embedding: a.string().required(),
+  }).authorization((allow) => [allow.owner()]),
   AdminUser: a.customType({
     username: a.string().required(),
     email: a.string(),
@@ -74,6 +97,30 @@ const schema = a.schema({
     .returns(a.integer().required())
     .authorization((allow) => [allow.authenticated()])
     .handler(a.handler.function(incrementQuestionCountHandler)),
+  indexLibraryDocument: a.mutation()
+    .arguments({
+      documentId: a.id().required(),
+      s3Key: a.string().required(),
+      filename: a.string().required(),
+      contentType: a.string().required(),
+      size: a.integer().required(),
+    })
+    .returns(a.ref('LibraryDocument'))
+    .authorization((allow) => allow.authenticated())
+    .handler(a.handler.function(indexLibraryDocumentHandler)),
+  searchLibrary: a.query()
+    .arguments({
+      query: a.string().required(),
+      documentIds: a.string().array(),
+    })
+    .returns(a.ref('LibrarySearchResult').array())
+    .authorization((allow) => allow.authenticated())
+    .handler(a.handler.function(searchLibraryHandler)),
+  LibrarySearchResult: a.customType({
+    filename: a.string().required(),
+    text: a.string().required(),
+    score: a.float().required(),
+  }),
   chat: a.conversation({    
     aiModel: {resourcePath: crossRegionModel,},
     systemPrompt: 'You are a helpful assistant',

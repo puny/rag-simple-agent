@@ -21,6 +21,7 @@ RAG Simple App은 AWS Amplify와 Next.js를 기반으로 만든 간단한 AI 채
 - 대화 제목 수정, 복사, 공유 기능
 - 게스트/일반/프리미엄 멤버십별 질문 제한
 - 관리자 전용 사용자 및 멤버십 관리 화면
+- 사용자별 텍스트 라이브러리 업로드 및 문서 기반 RAG 답변
 - AWS Amplify Gen2 기반 백엔드 구조
 
 ## 기술 스택
@@ -32,6 +33,10 @@ RAG Simple App은 AWS Amplify와 Next.js를 기반으로 만든 간단한 AI 채
 - Amazon Cognito
 - AppSync / GraphQL 기반 데이터 모델
 - DynamoDB
+
+## 사용자 라이브러리
+
+대시보드에서 `txt`, `md`, `csv`, `json` 파일을 업로드하면 해당 사용자만 문서를 조회하고 삭제할 수 있습니다. Chat 질문과 관련된 문단은 개인 라이브러리에서 검색되어 답변 컨텍스트로 전달됩니다. 현재 브라우저 업로드는 파일당 300KB 이하로 제한되며, PDF와 Word 문서는 지원하지 않습니다.
 
 ## 프로젝트 구조
 
