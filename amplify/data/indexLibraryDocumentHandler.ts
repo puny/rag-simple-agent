@@ -2,7 +2,7 @@ import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedroc
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { DeleteCommand, DynamoDBDocumentClient, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
-import pdfParse from 'pdf-parse';
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 const s3 = new S3Client({});
 const bedrock = new BedrockRuntimeClient({ region: process.env.AWS_REGION });
@@ -23,8 +23,21 @@ const getBodyBytes = async (body: unknown) => {
 const getDocumentText = async (body: unknown, contentType: string, filename: string) => {
   const bytes = await getBodyBytes(body);
   if (contentType === 'application/pdf' || filename.toLowerCase().endsWith('.pdf')) {
-    const result = await pdfParse(Buffer.from(bytes));
-    return result.text.trim();
+    const document = await getDocument({ data: bytes }).promise;
+    try {
+      const pages: string[] = [];
+      for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+        const page = await document.getPage(pageNumber);
+        const textContent = await page.getTextContent();
+        pages.push(textContent.items
+          .map((item) => ('str' in item ? item.str : ''))
+          .join(''));
+        page.cleanup();
+      }
+      return pages.join('\n\n').trim();
+    } finally {
+      await document.destroy();
+    }
   }
   return new TextDecoder().decode(bytes);
 };

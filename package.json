@@ -19,7 +19,7 @@
     "@aws-sdk/lib-dynamodb": "^3.1118.0",
     "aws-amplify": "^6.20.0",
     "next": "^15.1.0",
-    "pdf-parse": "1.1.1",
+    "pdfjs-dist": "4.10.38",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0"
@@ -28,7 +28,6 @@
     "@aws-amplify/backend": "^1.24.0",
     "@aws-amplify/backend-cli": "^1.4.0",
     "@types/node": "^20",
-    "@types/pdf-parse": "1.1.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.5.4",
