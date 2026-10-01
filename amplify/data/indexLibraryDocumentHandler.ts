@@ -4,6 +4,7 @@ import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { DeleteCommand, DynamoDBDocumentClient, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { getDocument, PDFWorker } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { WorkerMessageHandler } from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
+import { createLibraryLogger, type LibraryLogger } from './libraryLogger.js';
 
 const s3 = new S3Client({});
 const bedrock = new BedrockRuntimeClient({ region: process.env.AWS_REGION });
@@ -19,21 +20,6 @@ type Event = {
   identity?: { sub?: string };
 };
 
-const logInfo = (documentId: string, event: string, details: Record<string, unknown> = {}) => {
-  console.info(JSON.stringify({ component: 'library-indexing', documentId, event, ...details }));
-};
-
-const logError = (documentId: string, stage: string, error: unknown) => {
-  console.error(JSON.stringify({
-    component: 'library-indexing',
-    documentId,
-    event: 'failed',
-    stage,
-    error: error instanceof Error ? error.message : String(error),
-    stack: error instanceof Error ? error.stack : undefined,
-  }));
-};
-
 const getBodyBytes = async (body: unknown) => {
   if (!body || typeof body !== 'object' || !('transformToByteArray' in body)) {
     throw new Error('Unable to read the uploaded document');
@@ -41,23 +27,47 @@ const getBodyBytes = async (body: unknown) => {
   return (body as { transformToByteArray: () => Promise<Uint8Array> }).transformToByteArray();
 };
 
-const extractPdfText = async (bytes: Uint8Array, documentId: string) => {
+const extractPdfText = async (bytes: Uint8Array, logger: LibraryLogger) => {
   const startedAt = Date.now();
-  logInfo(documentId, 'pdf.parse.started', { sizeBytes: bytes.byteLength });
+  logger.info('pdf.parse.started', { sizeBytes: bytes.byteLength });
   const document = await getDocument({ data: bytes }).promise;
   try {
-    logInfo(documentId, 'pdf.opened', { pageCount: document.numPages });
+    logger.info('pdf.opened', { pageCount: document.numPages });
     const pages: string[] = [];
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
       const page = await document.getPage(pageNumber);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item) => ('str' in item ? item.str : ''))
-        .join('');
+      let pageText = '';
+      let previousItem: typeof textContent.items[number] | undefined;
+      for (const item of textContent.items) {
+        if (!('str' in item)) {
+          continue;
+        }
+        if (previousItem && 'str' in previousItem) {
+          const previousY = previousItem.transform[5];
+          const currentY = item.transform[5];
+          const lineHeight = Math.max(previousItem.height, item.height, 1);
+          if (Math.abs(currentY - previousY) > Math.max(2, lineHeight * 0.5) || previousItem.hasEOL) {
+            pageText += '\n';
+          } else {
+            const previousRight = previousItem.transform[4] + previousItem.width;
+            const horizontalGap = item.transform[4] - previousRight;
+            if (
+              horizontalGap > Math.max(1, lineHeight * 0.2)
+              && !pageText.endsWith(' ')
+              && !item.str.startsWith(' ')
+            ) {
+              pageText += ' ';
+            }
+          }
+        }
+        pageText += item.str;
+        previousItem = item;
+      }
       pages.push(pageText);
       page.cleanup();
       if (pageNumber === 1 || pageNumber % 10 === 0 || pageNumber === document.numPages) {
-        logInfo(documentId, 'pdf.page.extracted', {
+        logger.info('pdf.page.extracted', {
           pageNumber,
           pageCount: document.numPages,
           textCharacters: pageText.length,
@@ -65,7 +75,7 @@ const extractPdfText = async (bytes: Uint8Array, documentId: string) => {
       }
     }
     const text = pages.join('\n\n');
-    logInfo(documentId, 'pdf.parse.completed', {
+    logger.info('pdf.parse.completed', {
       pageCount: document.numPages,
       textCharacters: text.length,
       durationMs: Date.now() - startedAt,
@@ -76,11 +86,11 @@ const extractPdfText = async (bytes: Uint8Array, documentId: string) => {
   }
 };
 
-const getDocumentText = async (body: unknown, contentType: string, filename: string, documentId: string) => {
+const getDocumentText = async (body: unknown, contentType: string, filename: string, logger: LibraryLogger) => {
   const bytes = await getBodyBytes(body);
-  logInfo(documentId, 'document.bytes.read', { sizeBytes: bytes.byteLength });
+  logger.info('document.bytes.read', { sizeBytes: bytes.byteLength });
   if (contentType === 'application/pdf' || filename.toLowerCase().endsWith('.pdf')) {
-    return (await extractPdfText(bytes, documentId)).trim();
+    return (await extractPdfText(bytes, logger)).trim();
   }
   return new TextDecoder().decode(bytes);
 };
@@ -115,8 +125,9 @@ export const handler = async (event: Event) => {
   const chunksTable = process.env.LIBRARY_CHUNKS_TABLE_NAME;
   const startedAt = Date.now();
   let stage = 'validate';
+  const logger = createLibraryLogger('library-indexing', { documentId });
 
-  logInfo(documentId, 'started', { contentType, sizeBytes: size });
+  logger.info('started', { contentType, sizeBytes: size });
 
   try {
     if (!owner || !bucket || !documentsTable || !chunksTable) {
@@ -124,17 +135,17 @@ export const handler = async (event: Event) => {
     }
 
     stage = 's3.download';
-    logInfo(documentId, 's3.download.started');
+    logger.info('s3.download.started');
     const object = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: s3Key }));
-    logInfo(documentId, 's3.download.completed');
+    logger.info('s3.download.completed');
 
     stage = 'document.extract';
-    const content = await getDocumentText(object.Body, contentType, filename, documentId);
-    logInfo(documentId, 'document.extracted', { textCharacters: content.length });
+    const content = await getDocumentText(object.Body, contentType, filename, logger);
+    logger.info('document.extracted', { textCharacters: content.length });
 
     stage = 'chunks.split';
     const chunks = splitIntoChunks(content);
-    logInfo(documentId, 'chunks.split', { chunkCount: chunks.length });
+    logger.info('chunks.split', { chunkCount: chunks.length });
 
     stage = 'chunks.scan';
     const oldChunks = await dynamo.send(new ScanCommand({
@@ -143,7 +154,7 @@ export const handler = async (event: Event) => {
       ExpressionAttributeNames: { '#owner': 'owner' },
       ExpressionAttributeValues: { ':owner': owner, ':documentId': documentId },
     }));
-    logInfo(documentId, 'chunks.previous.scan.completed', { chunkCount: oldChunks.Items?.length ?? 0 });
+    logger.info('chunks.previous.scan.completed', { chunkCount: oldChunks.Items?.length ?? 0 });
     for (const oldChunk of oldChunks.Items ?? []) {
       await dynamo.send(new DeleteCommand({
         TableName: chunksTable,
@@ -153,7 +164,7 @@ export const handler = async (event: Event) => {
 
     for (const [index, text] of chunks.entries()) {
       stage = `chunk.${index + 1}.embed`;
-      logInfo(documentId, 'chunk.embedding.started', { chunkNumber: index + 1, chunkCount: chunks.length });
+      logger.info('chunk.embedding.started', { chunkNumber: index + 1, chunkCount: chunks.length });
       const embedding = await embed(text);
       stage = `chunk.${index + 1}.save`;
       await dynamo.send(new PutCommand({
@@ -169,7 +180,7 @@ export const handler = async (event: Event) => {
           updatedAt: new Date().toISOString(),
         },
       }));
-      logInfo(documentId, 'chunk.saved', { chunkNumber: index + 1, chunkCount: chunks.length });
+      logger.info('chunk.saved', { chunkNumber: index + 1, chunkCount: chunks.length });
     }
 
     stage = 'document.save';
@@ -185,10 +196,10 @@ export const handler = async (event: Event) => {
       updatedAt: new Date().toISOString(),
     };
     await dynamo.send(new PutCommand({ TableName: documentsTable, Item: item }));
-    logInfo(documentId, 'completed', { status: item.status, chunkCount: chunks.length, durationMs: Date.now() - startedAt });
+    logger.info('completed', { status: item.status, chunkCount: chunks.length, durationMs: Date.now() - startedAt });
     return item;
   } catch (error) {
-    logError(documentId, stage, error);
+    logger.error(stage, error);
     throw error;
   }
 };
