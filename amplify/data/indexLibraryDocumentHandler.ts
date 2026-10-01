@@ -2,6 +2,7 @@ import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedroc
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { DeleteCommand, DynamoDBDocumentClient, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { PDFParse } from 'pdf-parse';
 
 const s3 = new S3Client({});
 const bedrock = new BedrockRuntimeClient({ region: process.env.AWS_REGION });
@@ -12,11 +13,36 @@ type Event = {
   identity?: { sub?: string };
 };
 
-const getBodyText = async (body: unknown) => {
-  if (!body || typeof body !== 'object' || !('transformToString' in body)) {
+const getBodyBytes = async (body: unknown) => {
+  if (!body || typeof body !== 'object' || !('transformToByteArray' in body)) {
     throw new Error('Unable to read the uploaded document');
   }
-  return (body as { transformToString: () => Promise<string> }).transformToString();
+  return (body as { transformToByteArray: () => Promise<Uint8Array> }).transformToByteArray();
+};
+
+const getDocumentText = async (body: unknown, contentType: string, filename: string) => {
+  const bytes = await getBodyBytes(body);
+  if (contentType === 'application/pdf' || filename.toLowerCase().endsWith('.pdf')) {
+    const parser = new PDFParse({ data: bytes });
+    try {
+      const result = await parser.getText();
+      return result.text.trim();
+    } finally {
+      await parser.destroy();
+    }
+  }
+  return new TextDecoder().decode(bytes);
+};
+
+const splitIntoChunks = (content: string) => {
+  const chunks: string[] = [];
+  const paragraphs = content.split(/\n\s*\n/).map((text) => text.trim()).filter(Boolean);
+  for (const paragraph of paragraphs) {
+    for (let offset = 0; offset < paragraph.length; offset += 6000) {
+      chunks.push(paragraph.slice(offset, offset + 6000));
+    }
+  }
+  return chunks;
 };
 
 const embed = async (text: string) => {
@@ -42,8 +68,8 @@ export const handler = async (event: Event) => {
   }
 
   const object = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: s3Key }));
-  const content = await getBodyText(object.Body);
-  const chunks = content.split(/\n\s*\n/).map((text) => text.trim()).filter(Boolean);
+  const content = await getDocumentText(object.Body, contentType, filename);
+  const chunks = splitIntoChunks(content);
 
   const oldChunks = await dynamo.send(new ScanCommand({
     TableName: chunksTable,
@@ -66,8 +92,8 @@ export const handler = async (event: Event) => {
         owner,
         documentId,
         filename,
-        text: text.slice(0, 6000),
-        embedding: JSON.stringify(await embed(text.slice(0, 6000))),
+        text,
+        embedding: JSON.stringify(await embed(text)),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },

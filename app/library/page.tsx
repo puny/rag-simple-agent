@@ -29,9 +29,9 @@ export default function LibraryPage() {
   }, []);
 
   const uploadDocument = async (file: File) => {
-    const extensions = ['.txt', '.md', '.csv', '.json'];
+    const extensions = ['.txt', '.md', '.csv', '.json', '.pdf'];
     if (!extensions.some((extension) => file.name.toLowerCase().endsWith(extension))) {
-      setMessage('txt, md, csv, json 파일만 업로드할 수 있습니다.');
+      setMessage('txt, md, csv, json, pdf 파일만 업로드할 수 있습니다.');
       return;
     }
     if (file.size > 300 * 1024) {
@@ -45,12 +45,13 @@ export default function LibraryPage() {
       if (!identityId) throw new Error('인증 정보가 없습니다.');
       const id = crypto.randomUUID();
       const s3Key = `library/${identityId}/${id}/${file.name}`;
+      const contentType = file.type || (file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'text/plain');
       await client.models.LibraryDocument.create({
-        id, filename: file.name, s3Key, contentType: file.type || 'text/plain', size: file.size, status: 'PROCESSING',
+        id, filename: file.name, s3Key, contentType, size: file.size, status: 'PROCESSING',
       });
       await uploadData({ path: s3Key, data: file }).result;
       await client.mutations.indexLibraryDocument({
-        documentId: id, s3Key, filename: file.name, contentType: file.type || 'text/plain', size: file.size,
+        documentId: id, s3Key, filename: file.name, contentType, size: file.size,
       });
       await loadDocuments();
       setMessage('업로드가 완료되었습니다.');
@@ -90,8 +91,8 @@ export default function LibraryPage() {
             <section className="p-5 sm:p-8">
               <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-teal-400 bg-teal-50 text-center hover:bg-teal-100">
                 <span className="font-semibold text-teal-800">파일 업로드</span>
-                <span className="mt-1 text-sm text-teal-700">txt, md, csv, json · 최대 300KB</span>
-                <input type="file" accept=".txt,.md,.csv,.json,text/plain,text/csv,application/json" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadDocument(file); event.target.value = ''; }} />
+                <span className="mt-1 text-sm text-teal-700">txt, md, csv, json, pdf · 최대 300KB</span>
+                <input type="file" accept=".txt,.md,.csv,.json,.pdf,text/plain,text/csv,application/json,application/pdf" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadDocument(file); event.target.value = ''; }} />
               </label>
               {message && <p className="mt-3 text-sm text-slate-600">{message}</p>}
               <div className="mt-6 divide-y divide-slate-200 rounded-xl border border-slate-200">
