@@ -2,7 +2,7 @@ import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedroc
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { DeleteCommand, DynamoDBDocumentClient, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
-import { PDFParse } from 'pdf-parse';
+import pdfParse from 'pdf-parse';
 
 const s3 = new S3Client({});
 const bedrock = new BedrockRuntimeClient({ region: process.env.AWS_REGION });
@@ -23,13 +23,8 @@ const getBodyBytes = async (body: unknown) => {
 const getDocumentText = async (body: unknown, contentType: string, filename: string) => {
   const bytes = await getBodyBytes(body);
   if (contentType === 'application/pdf' || filename.toLowerCase().endsWith('.pdf')) {
-    const parser = new PDFParse({ data: bytes });
-    try {
-      const result = await parser.getText();
-      return result.text.trim();
-    } finally {
-      await parser.destroy();
-    }
+    const result = await pdfParse(Buffer.from(bytes));
+    return result.text.trim();
   }
   return new TextDecoder().decode(bytes);
 };
